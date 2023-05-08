@@ -1,65 +1,47 @@
 class Core:
-    class Result:
-        DRAW = 0
-        BLACK_WIN = 1
-        WHITE_WIN = 2
+    BLACK = 1
+    WHITE = -1
 
     def __init__(self, board_size):
         self.board_size = board_size
         self.board = [[None for _ in range(board_size)] for _ in range(board_size)]
-        self.is_black_turn = True
-        self.result = None
+        self.turn = Core.BLACK
+        self.winner = None
 
+    # 重置
     def reset(self):
         self.__init__(self.board_size)
 
+    # 落子
     def drop(self, x, y):
-        if self.result is not None:
-            raise Exception(fr'game is over, result is {self.result}')
-        elif self.board[x][y] is not None:
-            raise Exception(fr'board[{x}][{y}] already has chess')
-        else:
-            self.board[x][y] = self.is_black_turn
-            if self.is_five_connect(x, y, (1, 0)) or self.is_five_connect(x, y, (0, 1)) or \
-                    self.is_five_connect(x, y, (1, 1)) or self.is_five_connect(x, y, (1, -1)):
-                self.result = Core.Result.BLACK_WIN if self.is_black_turn else Core.Result.WHITE_WIN
+        if self.winner is None and self.board[y][x] is None:
+            self.board[y][x] = self.turn
+            if self._five_connect(x, y, (1, 0)) or self._five_connect(x, y, (0, 1)) or \
+                    self._five_connect(x, y, (1, 1)) or self._five_connect(x, y, (1, -1)):
+                self.winner = self.turn  # 有输赢
             else:
-                full_board = all([c is not None for row in self.board for c in row])
-                if full_board: self.result = Core.Result.DRAW
-            if self.result is None: self.is_black_turn = not self.is_black_turn
-            print(self.__dict__)
+                for row in self.board:
+                    for chess in row:
+                        if chess is None:
+                            self.turn = -self.turn  # 继续
+                            return
+                self.winner = 0  # 平局
 
-    def is_five_connect(self, x, y, direct):
-        chess = self.board[x][y]
-        if chess is None: raise Exception(fr'board[{x}][{y}] has no chess')
-        count = 1
-        temp_x = x
-        temp_y = y
-        try:
+    # 是否五子连珠
+    def _five_connect(self, x, y, direct):
+        return self._same_num(x, y, direct) + self._same_num(x, y, (-direct[0], -direct[1])) >= 4
+
+    # 获取相同棋子数目
+    def _same_num(self, x, y, direct):
+        chess = self.board[y][x]
+        count = 0
+        if chess is not None:
             while True:
-                temp_x, temp_y, temp_chess = self.next(temp_x, temp_y, direct)
-                if temp_chess == chess:
-                    count += 1
-                else:
-                    break
-        except:
-            pass
-
-        temp_x = x
-        temp_y = y
-        try:
-            while True:
-                temp_x, temp_y, temp_chess = self.next(temp_x, temp_y, (-direct[0], -direct[1]))
-                if temp_chess == chess:
-                    count += 1
-                else:
-                    break
-        except:
-            pass
-
-        return count >= 5
-
-    def next(self, x, y, direct):
-        x = x + direct[0]
-        y = y + direct[1]
-        return x, y, self.board[x][y]
+                x += direct[0]
+                y += direct[1]
+                if 0 <= x < self.board_size and 0 <= y < self.board_size:
+                    if self.board[y][x] == chess:
+                        count += 1
+                    else:
+                        break
+        return count
